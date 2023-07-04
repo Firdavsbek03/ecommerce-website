@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+
+<div class="row">
+
+    <div class="col-lg-6" >
+        <div class="box-element" id="form-wrapper">
+            <form action="" id="form">
+                {% csrf_token %}
+                <div id="user-info">
+                    <div class="form-field">
+                        <input  class="form-control" type="text" name="name" placeholder="Name..">
+                    </div>
+                    <div class="form-field">
+                        <input  class="form-control" type="email" name="email" placeholder="Email..">
+                    </div>
+                    <hr>
+                </div>
+                <div id="shipping-info">
+                    <p>Shipping Information:</p>
+                    <hr>
+                    <div class="form-field">
+                        <input class="form-control" type="text" name="address" placeholder="Address..">
+                    </div>
+                    <div class="form-field">
+                        <input class="form-control" type="text" name="city" placeholder="City..">
+                    </div>
+                    <div class="form-field">
+                        <input class="form-control" type="text" name="state" placeholder="State..">
+                    </div>
+                    <div class="form-field">
+                        <input class="form-control" type="text" name="zipcode" placeholder="Zip code..">
+                    </div>
+                </div>
+                <hr>
+                <div class="d-grid gap-2">
+                    <input id="form-button" class="btn btn-success" type="submit" value="Continue">
+                </div>
+            </form>
+        </div>
+        <br>
+        <div class="box-element hidden" id="payment-info">
+            <small>Click Options</small>
+            <button id="make-payment">Make Payment</button>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="box-element">
+            <a class="btn btn-outline-dark" href="{% url 'cart' %}"><i class="fa-solid fa-arrow-left"></i>&nbsp;Back to
+                Cart</a>
+            <hr>
+            <h3>Order Summary</h3>
+            <hr>
+
+            {% for item in ordered_items %}
+            <div class="cart-row">
+                <div style="flex:2"><img class="row-image" src="{{item.product.get_image_url}}"></div>
+                <div style="flex:2"><p>{{item.product.name}}</p></div>
+                <div style="flex:1"><p>${{item.product.price}}</p></div>
+                <div style="flex:1"><p>x{{item.quantity}}</p></div>
+            </div>
+            {% endfor %}
+
+            <h5>Items: {{order.cart_total_items}}</h5>
+            <h5>Total: ${{order.cart_total_price|floatformat:2}}</h5>
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+    let shipping='{{order.shipping}}'
+    let total_price="{{order.cart_total_price}}"
+
+    if(shipping === "False"){
+        document.getElementById("shipping-info").innerHTML=''
+    }
+
+    if(user!=="AnonymousUser"){
+        document.getElementById('user-info').classList.add("hidden")
+    }
+
+    if(shipping==="False" && user!=="AnonymousUser"){
+        document.getElementById('form-wrapper').classList.add("hidden")
+        document.getElementById('payment-info').classList.remove('hidden')
+        document.getElementById('payment-info').classList.remove('hidden')
+    }
+
+    let form = document.getElementById("form")
+    form.addEventListener("submit",function (e){
+        e.preventDefault()
+        console.log("Form is submitted...")
+        document.getElementById('payment-info').classList.remove('hidden')
+        document.getElementById('form-button').classList.add("hidden")
+    })
+    document.getElementById('make-payment').addEventListener('click',function (e){
+        make_payment()
+    })
+    function make_payment(){
+        let user_form_data={
+            "name":null,
+            'email':null,
+            'total':total_price,
+        }
+
+        let shipping_form_data={
+            'address':null,
+            'city':null,
+            'state':null,
+            'zipcode':null,
+        }
+
+        if(shipping !== 'False'){
+            shipping_form_data.address=form.address.value
+            shipping_form_data.city=form.city.value
+            shipping_form_data.state=form.state.value
+            shipping_form_data.zipcode=form.zipcode.value
+        }
+
+        if(user === "AnonymousUser"){
+            user_form_data.name=form.name.value
+            user_form_data.email=form.email.value
+        }
+
+        let url='/process_order/'
+        fetch(url,{
+            method:"POST",
+            headers:{
+                "Content-Type":"application/json",
+                "X-CSRFToken":csrftoken
+            },
+            body:JSON.stringify({"user_form_data":user_form_data,"shipping_form_data":shipping_form_data})
+        })
+            .then((response)=>response.json())
+            .then((data)=>{
+                console.log("Success:",data)
+                alert("Transaction completed")
+                cart={}
+                document.cookie ='cart=' + JSON.stringify(cart) + ";domain=;path=/"
+                window.location.href="{% url 'store' %}"
+
+            })
+    }
+</script>
+{% endblock content %}
